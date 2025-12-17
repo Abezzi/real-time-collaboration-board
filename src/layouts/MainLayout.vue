@@ -4,7 +4,7 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
 
-        <q-toolbar-title> Quasar App </q-toolbar-title>
+        <q-toolbar-title> Real-time Collaboration Board </q-toolbar-title>
 
         <div>Quasar v{{ $q.version }}</div>
       </q-toolbar>
@@ -12,9 +12,14 @@
 
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
       <q-list>
-        <q-item-label header> Essential Links </q-item-label>
-
+        <q-item-label header> Essentials </q-item-label>
         <EssentialLink v-for="link in linksList" :key="link.title" v-bind="link" />
+
+        <q-item-label header> Reminders </q-item-label>
+        <EssentialLink v-for="reminder in remindersList" :key="reminder.title" v-bind="reminder" />
+
+        <q-item-label header> Preferences </q-item-label>
+        <EssentialLink v-for="setting in settingList" :key="setting.title" v-bind="setting" />
       </q-list>
     </q-drawer>
 
@@ -28,48 +33,60 @@
 import { ref } from 'vue';
 import EssentialLink, { type EssentialLinkProps } from 'components/EssentialLink.vue';
 
+const settingList: EssentialLinkProps[] = [
+  {
+    title: 'User',
+    caption: 'Edit your Profile',
+    icon: 'settings',
+    link: '/setting/user',
+  },
+  {
+    title: 'System',
+    caption: 'General Configuration',
+    icon: 'build',
+    link: '/setting/system',
+  },
+];
+
+const remindersList: EssentialLinkProps[] = [
+  {
+    title: 'Alarm',
+    caption: 'Notifications',
+    icon: 'notifications',
+    link: '/reminder/alarm',
+  },
+  {
+    title: 'Calendar',
+    caption: 'Check Notes On The Calendar',
+    icon: 'calendar_month',
+    link: '/reminder/calendar',
+  },
+];
+
 const linksList: EssentialLinkProps[] = [
   {
-    title: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev',
+    title: 'Boards',
+    caption: 'Board',
+    icon: 'developer_board',
+    link: '/board',
   },
   {
-    title: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework',
+    title: 'Notes',
+    caption: 'Notes',
+    icon: 'sticky_note_2',
+    link: '/note',
   },
   {
-    title: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
+    title: 'Chat Channel',
+    caption: 'Team Conversations',
     icon: 'chat',
-    link: 'https://chat.quasar.dev',
+    link: '/chat',
   },
   {
-    title: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev',
-  },
-  {
-    title: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev',
-  },
-  {
-    title: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev',
-  },
-  {
-    title: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev',
+    title: 'Teams',
+    caption: 'Teams',
+    icon: 'group',
+    link: '/team',
   },
 ];
 
