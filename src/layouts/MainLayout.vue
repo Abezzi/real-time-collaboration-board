@@ -5,9 +5,37 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
 
+        <!-- app title -->
         <q-toolbar-title> Real-time Collaboration Board </q-toolbar-title>
 
-        <div>Quasar v{{ $q.version }}</div>
+        <!-- user -->
+        <div class="row items-center q-gutter-sm">
+          <q-avatar color="secondary" text-color="white" size="md">
+            {{ usernameInitial }}
+          </q-avatar>
+
+          <q-btn flat no-caps dense align="left" class="text-weight-medium">
+            {{ authStore.user?.username || 'Guest' }}
+
+            <q-menu anchor="bottom end" self="top end">
+              <q-list style="min-width: 200px">
+                <q-item>
+                  <q-item-section>
+                    Signed in as<br />
+                    <strong>{{ authStore.user?.username || 'Guest' }}</strong>
+                  </q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item clickable v-close-popup @click="handleLogout">
+                  <q-item-section>Logout</q-item-section>
+                  <q-item-section avatar>
+                    <q-icon name="logout" color="negative" />
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </div>
       </q-toolbar>
     </q-header>
 
@@ -33,8 +61,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from 'src/stores/auth';
+import { useQuasar } from 'quasar';
 import EssentialLink, { type EssentialLinkProps } from 'components/EssentialLink.vue';
+
+const router = useRouter();
+const authStore = useAuthStore();
+const $q = useQuasar();
+
+// First letter for user avatar
+const usernameInitial = computed(() => {
+  const username = authStore.user?.username;
+  // G is the fallback since the user can be 'guest' in future implementations
+  return username ? username.charAt(0).toUpperCase() : 'G';
+});
+
+// Drawer toggle
+const leftDrawerOpen = ref(false);
+function toggleLeftDrawer() {
+  leftDrawerOpen.value = !leftDrawerOpen.value;
+}
+
+// Logout handler
+async function handleLogout() {
+  authStore.logout();
+  // notification
+  $q.notify({
+    type: 'positive',
+    message: 'Logged out',
+    position: 'top',
+    timeout: 2000,
+  });
+  await router.push('/login');
+}
 
 const settingList: EssentialLinkProps[] = [
   {
@@ -68,6 +129,12 @@ const remindersList: EssentialLinkProps[] = [
 
 const linksList: EssentialLinkProps[] = [
   {
+    title: 'Home',
+    caption: 'Home',
+    icon: 'home',
+    link: '/',
+  },
+  {
     title: 'Boards',
     caption: 'Board',
     icon: 'developer_board',
@@ -92,10 +159,4 @@ const linksList: EssentialLinkProps[] = [
     link: '/team',
   },
 ];
-
-const leftDrawerOpen = ref(false);
-
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value;
-}
 </script>
