@@ -54,6 +54,20 @@ db.exec(`
     FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id INTEGER NOT NULL,
+    title TEXT NOT NULL DEFAULT 'New Note',
+    content TEXT DEFAULT '',
+    x REAL NOT NULL DEFAULT 100,
+    y REAL NOT NULL DEFAULT 100,
+    z_index INTEGER NOT NULL DEFAULT 0,
+    color TEXT DEFAULT '#fff59d',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+  );
 `);
 
 // Migrate existing boards table if needed
@@ -176,6 +190,66 @@ app.post('/api/boards', authenticateToken, (req, res) => {
   const info = stmt.run(name, description, ownerId);
 
   res.json({ id: info.lastInsertRowid, name, description });
+});
+
+// GET /api/boards/:id - single board details
+app.get('/api/boards/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  // Check if user has access (owner or collaborator with any role)
+  const isOwner = db.prepare('SELECT 1 FROM boards WHERE id = ? AND owner_id = ?').get(id, userId);
+  const isCollaborator = db
+    .prepare('SELECT 1 FROM board_users WHERE board_id = ? AND user_id = ?')
+    .get(id, userId);
+
+  if (!isOwner && !isCollaborator) {
+    return res.sendStatus(403);
+  }
+
+  const board = db
+    .prepare(
+      `
+    SELECT id, title AS name, description
+    FROM boards
+    WHERE id = ?
+  `,
+    )
+    .get(id);
+
+  if (!board) return res.sendStatus(404);
+
+  res.json(board);
+});
+
+// GET /api/boards/:id/notes - all notes from a single board
+app.get('/api/boards/:id/notes', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  // Re-use access check
+  const isOwner = db.prepare('SELECT 1 FROM boards WHERE id = ? AND owner_id = ?').get(id, userId);
+  const isCollaborator = db
+    .prepare('SELECT 1 FROM board_users WHERE board_id = ? AND user_id = ?')
+    .get(id, userId);
+
+  if (!isOwner && !isCollaborator) {
+    return res.sendStatus(403);
+  }
+
+  const notes = db
+    .prepare(
+      `
+    SELECT 
+      id, title, content, x, y, z_index AS zIndex, color
+    FROM notes
+    WHERE board_id = ?
+    ORDER BY z_index DESC, id ASC
+  `,
+    )
+    .all(id);
+
+  res.json(notes);
 });
 
 // PUT /api/boards/:id - update name/desc

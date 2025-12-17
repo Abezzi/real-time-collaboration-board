@@ -14,9 +14,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     children: [
       { path: '', component: () => import('pages/HomePage.vue') },
+      // board list
       {
         path: 'board',
         component: () => import('pages/BoardPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      // single board view
+      {
+        path: 'board/:id(\\d+)',
+        component: () => import('pages/BoardView.vue'),
         meta: { requiresAuth: true },
       },
       // add other protected children here (note, chat, team, etc.)
