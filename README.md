@@ -4,7 +4,7 @@ Real-time Collaboration Board with Vue3 + Socket.io
 
 ## Project Architecture
 
-- Runtime: NodeJS + Vite
+- Runtime: NodeJS with Express API + Vite
 - Language: TypeScript
 - Database: SQLite
 - Front-end: Vue3, Vite, Quasar, Pinia
