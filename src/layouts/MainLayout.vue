@@ -133,6 +133,7 @@ const linksList: EssentialLinkProps[] = [
     caption: 'Home',
     icon: 'home',
     link: '/',
+    exact: true,
   },
   {
     title: 'Boards',

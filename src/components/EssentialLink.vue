@@ -1,5 +1,5 @@
 <template>
-  <q-item :to="link">
+  <q-item :to="link" :exact="exact">
     <q-item-section v-if="icon" avatar>
       <q-icon :name="icon" />
     </q-item-section>
@@ -17,11 +17,13 @@ export interface EssentialLinkProps {
   caption?: string;
   link?: string;
   icon?: string;
+  exact?: boolean;
 }
 
 withDefaults(defineProps<EssentialLinkProps>(), {
   caption: '',
   link: '#',
   icon: '',
+  exact: false,
 });
 </script>
