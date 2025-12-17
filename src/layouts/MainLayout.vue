@@ -1,5 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
+    <!-- header -->
     <q-header elevated>
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
@@ -10,6 +11,7 @@
       </q-toolbar>
     </q-header>
 
+    <!-- left drawer layout -->
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
       <q-list>
         <q-item-label header> Essentials </q-item-label>
@@ -23,6 +25,7 @@
       </q-list>
     </q-drawer>
 
+    <!-- page container -->
     <q-page-container>
       <router-view />
     </q-page-container>
