@@ -5,6 +5,7 @@ import cors from 'cors';
 
 import authRoutes from './routes/auth.js';
 import boardRoutes from './routes/boards.js';
+import userRoutes from './routes/users.js';
 import { setupSocket } from './socket/index.js';
 
 const app = express();
@@ -22,6 +23,7 @@ app.use(cors({ origin: 'http://localhost:9000' }));
 // Routes
 app.use('/api', authRoutes);
 app.use('/api/boards', boardRoutes);
+app.use('/api/users', userRoutes);
 
 // Setup socket.io
 setupSocket(io);

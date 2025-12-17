@@ -314,16 +314,69 @@ async function editBoard(board: Board) {
   showEditDialog.value = true;
 }
 
-function addCollaborator() {
-  if (!newCollaborator.value.username.trim()) return;
+async function addCollaborator() {
+  const username = newCollaborator.value.username.trim();
+  if (!username) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter a username',
+      position: 'top',
+    });
+    return;
+  }
 
+  // check if user already in list
+  const alreadyExists = editForm.value.collaborators.some(
+    (c) => c.username.toLowerCase() === username.toLowerCase(),
+  );
+  // sends a notification if already in list
+  if (alreadyExists) {
+    $q.notify({
+      type: 'warning',
+      message: `User '${username}' is already a collaborator`,
+      position: 'top',
+    });
+    newCollaborator.value.username = '';
+    return;
+  }
+
+  // validate user exists on backend
+  try {
+    const { data } = await api.get(`/api/users/exists?username=${encodeURIComponent(username)}`);
+
+    if (!data.exists) {
+      $q.notify({
+        type: 'negative',
+        message: `The user '${username}' does not exist`,
+        position: 'top',
+        timeout: 4000,
+      });
+      return;
+    }
+  } catch (err) {
+    console.error(err);
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to validate user. Please try again.',
+    });
+    return;
+  }
+
+  // User exists, add to list
   editForm.value.collaborators.push({
-    userId: 0, // backend will resolve username → id
-    username: newCollaborator.value.username.trim(),
+    // backend will resolve
+    userId: 0,
+    username: username,
     role: newCollaborator.value.role,
   });
 
+  // Clear input
   newCollaborator.value.username = '';
+  $q.notify({
+    type: 'positive',
+    message: `User '${username}' added as ${newCollaborator.value.role}`,
+    position: 'top',
+  });
 }
 
 function removeCollaborator(userId: number) {
