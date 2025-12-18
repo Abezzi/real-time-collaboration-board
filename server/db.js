@@ -55,6 +55,10 @@ db.exec(`
 // migrate existing boards table if needed
 addColumnIfNotExists('boards', 'description', 'TEXT');
 addColumnIfNotExists('boards', 'owner_id', 'INTEGER NOT NULL DEFAULT 1');
+// migrate notes
+addColumnIfNotExists('notes', 'color', 'TEXT DEFAULT "#fff59d"');
+addColumnIfNotExists('notes', 'updated_by', 'INTEGER DEFAULT NULL');
+addColumnIfNotExists('notes', 'comments', 'TEXT DEFAULT "[]"');
 
 const boardsWithoutOwner = db
   .prepare('SELECT id FROM boards WHERE owner_id IS NULL OR owner_id = 0')

@@ -10,6 +10,7 @@ import {
   updateCollaborators,
   getNotes,
 } from '../controllers/boardController.js';
+import notesRoutes from './notes.js';
 
 const router = express.Router();
 
@@ -81,5 +82,7 @@ router.get('/:id/notes', authenticateToken, (req, res) => {
   const notes = getNotes(Number(req.params.id), req.user.id);
   res.json(notes);
 });
+
+router.use('/:id/notes', notesRoutes);
 
 export default router;

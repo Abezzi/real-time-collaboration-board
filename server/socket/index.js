@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
+import { createNote, updateNote, deleteNote, addComment } from '../controllers/noteController.js';
 
 const JWT_SECRET = 'your-secret-key-change-this-in-production';
 
@@ -19,9 +20,25 @@ export function setupSocket(io) {
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.user.username} (socket.id: ${socket.id})`);
 
-    // Join a board room when client sends 'joinBoard'
-    socket.on('joinBoard', (boardId) => {
-      // Basic access check (same as HTTP routes)
+    // helpers functions to check presence
+    async function getOnlineUsersInRoom(room) {
+      const sockets = await io.in(room).fetchSockets();
+      const usernames = new Set();
+      for (const s of sockets) {
+        if (s.user?.username) {
+          usernames.add(s.user.username);
+        }
+      }
+      return Array.from(usernames);
+    }
+
+    async function broadcastPresence(room) {
+      const users = await getOnlineUsersInRoom(room);
+      io.to(room).emit('presence:users', users);
+    }
+
+    // Join a board room
+    socket.on('joinBoard', async (boardId) => {
       const userId = socket.user.id;
       const hasAccess =
         db.prepare('SELECT 1 FROM boards WHERE id = ? AND owner_id = ?').get(boardId, userId) ||
@@ -34,91 +51,105 @@ export function setupSocket(io) {
         return;
       }
 
+      const room = `board:${boardId}`;
       socket.join(`board:${boardId}`);
       console.log(`${socket.user.username} joined board:${boardId}`);
 
-      // optional: send current notes immediately after joining
+      // send current notes immediately after joining
       const notes = db
         .prepare(
           `
-        SELECT id, title, content, x, y, z_index AS zIndex, color
-        FROM notes WHERE board_id = ?
-        ORDER BY z_index DESC
+        SELECT
+          n.id,
+          n.title,
+          n.content,
+          n.x,
+          n.y,
+          n.z_index AS zIndex,
+          n.color,
+          n.comments,
+          u.username AS updatedByUsername
+        FROM notes n
+        LEFT JOIN users u ON n.updated_by = u.id
+        WHERE n.board_id = ?
+        ORDER BY n.z_index DESC
       `,
         )
-        .all(boardId);
+        .all(boardId)
+        .map((note) => ({
+          ...note,
+          comments: note.comments ? JSON.parse(note.comments) : [],
+        }));
       socket.emit('initialNotes', notes);
+      await broadcastPresence(room);
     });
 
     // Leave board room
-    socket.on('leaveBoard', (boardId) => {
-      socket.leave(`board:${boardId}`);
-      console.log(`${socket.user.username} left board:${boardId}`);
-    });
-
-    // Real-time note events
-    socket.on('createNote', (note) => {
-      const room = `board:${note.boardId}`;
-      if (!socket.rooms.has(room)) return; // security
-
-      // Insert into DB
-      const stmt = db.prepare(`
-        INSERT INTO notes (board_id, title, content, x, y, z_index, color)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-      const info = stmt.run(
-        note.boardId,
-        note.title || 'New Note',
-        note.content || '',
-        note.x || 100,
-        note.y || 100,
-        note.zIndex || 0,
-        note.color || '#fff59d',
-      );
-
-      const newNote = {
-        id: info.lastInsertRowid,
-        ...note,
-      };
-
-      // Broadcast to everyone in the room (including sender)
-      io.to(room).emit('noteCreated', newNote);
-    });
-
-    socket.on('updateNote', (note) => {
-      const room = `board:${note.boardId}`;
-      if (!socket.rooms.has(room)) return;
-
-      db.prepare(
-        `
-        UPDATE notes
-        SET title = ?, content = ?, x = ?, y = ?, z_index = ?, color = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND board_id = ?
-      `,
-      ).run(
-        note.title,
-        note.content,
-        note.x,
-        note.y,
-        note.zIndex,
-        note.color,
-        note.id,
-        note.boardId,
-      );
-
-      io.to(room).emit('noteUpdated', note);
-    });
-
-    socket.on('deleteNote', ({ noteId, boardId }) => {
+    socket.on('leaveBoard', async (boardId) => {
       const room = `board:${boardId}`;
-      if (!socket.rooms.has(room)) return;
+      socket.leave(room);
+      console.log(`${socket.user.username} left board:${boardId}`);
 
-      db.prepare('DELETE FROM notes WHERE id = ? AND board_id = ?').run(noteId, boardId);
-      io.to(room).emit('noteDeleted', { noteId });
+      await broadcastPresence(room);
     });
 
-    socket.on('disconnect', () => {
+    // note events
+    socket.on('note:create', (noteData) => {
+      const boardId = noteData.boardId;
+      if (!socket.rooms.has(`board:${boardId}`)) return;
+
+      try {
+        const newNote = createNote(boardId, socket.user.id, noteData);
+        io.to(`board:${boardId}`).emit('note:created', newNote);
+      } catch (err) {
+        socket.emit('server:error', { message: err.message });
+      }
+    });
+
+    socket.on('note:update', (noteData) => {
+      const boardId = noteData.boardId;
+      if (!socket.rooms.has(`board:${boardId}`)) return;
+
+      try {
+        const updatedNote = updateNote(noteData.id, boardId, socket.user.id, noteData);
+        io.to(`board:${boardId}`).emit('note:updated', updatedNote);
+      } catch (err) {
+        socket.emit('server:error', { message: err.message });
+      }
+    });
+
+    socket.on('note:delete', ({ noteId, boardId }) => {
+      if (!socket.rooms.has(`board:${boardId}`)) return;
+
+      try {
+        deleteNote(noteId, boardId, socket.user.id);
+        io.to(`board:${boardId}`).emit('note:deleted', { noteId });
+      } catch (err) {
+        socket.emit('server:error', { message: err.message });
+      }
+    });
+
+    socket.on('note:comment', ({ noteId, boardId, text }) => {
+      if (!socket.rooms.has(`board:${boardId}`)) return;
+
+      try {
+        const result = addComment(noteId, boardId, socket.user.id, text);
+        io.to(`board:${boardId}`).emit('note:commented', result);
+      } catch (err) {
+        socket.emit('server:error', { message: err.message });
+      }
+    });
+
+    // when tab close, refresh, network loss
+    socket.on('disconnect', async () => {
       console.log(`User disconnected: ${socket.user.username}`);
+
+      // update the presence for every board room this socket was in
+      for (const room of socket.rooms) {
+        if (room.startsWith('board')) {
+          await broadcastPresence(room);
+        }
+      }
     });
   });
 }
