@@ -305,7 +305,9 @@ async function editBoard(board: Board) {
 
   try {
     const { data } = await api.get(`/api/boards/${board.id}/collaborators`);
-    editForm.value.collaborators = data;
+    editForm.value.collaborators = data.filter(
+      (collab: { role: string }) => collab.role !== 'owner',
+    );
   } catch (err) {
     console.error(err);
     $q.notify({ type: 'negative', message: 'Failed to load collaborators' });
