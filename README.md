@@ -22,6 +22,7 @@ Real-time Collaboration Board with Vue3 + Socket.io
 - Node.js 16+
 - QuasarCLI
 - SQLite
+- npm 6+
 
 ### 1. Install the front-end dependencies
 
@@ -35,12 +36,6 @@ Anywhere in your computer run this command to install the Quasar CLI which is th
 
 ```bash
 npm i -g @quasar/cli
-```
-
-### Start the app in development mode (hot-code reloading, error reporting, etc.)
-
-```bash
-quasar dev
 ```
 
 ### Lint the files
@@ -65,7 +60,19 @@ npm run format
 quasar build
 ```
 
-### 2. Back-end Dependencies
+## Run
+
+### Start the app in development mode (hot-code reloading, error reporting, etc.)
+
+```bash
+quasar dev
+```
+
+### Start the server
+
+```bash
+npm run server
+```
 
 ## Known Limitations
 
