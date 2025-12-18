@@ -87,9 +87,36 @@
           <q-editor v-model="editingNote.content" min-height="200px" />
           <q-color v-model="editingNote.color" label="Color" />
         </q-card-section>
+        <q-card-actions align="between">
+          <q-btn
+            v-if="currentUserRole === 'owner' || currentUserRole === 'editor'"
+            flat
+            color="negative"
+            icon="delete"
+            label="Delete"
+            @click="confirmDelete = true"
+          />
+          <div>
+            <q-btn flat label="Cancel" v-close-popup />
+            <q-btn color="primary" label="Save" @click="saveNoteEdit" />
+          </div>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Confirm Delete Dialog -->
+    <q-dialog v-model="confirmDelete" persistent>
+      <q-card>
+        <q-card-section class="row items-center">
+          <q-avatar icon="warning" color="negative" text-color="white" />
+          <span class="q-ml-sm"
+            >Are you sure you want to delete this note? This cannot be undone.</span
+          >
+        </q-card-section>
+
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="primary" label="Save" @click="saveNoteEdit" />
+          <q-btn flat label="Cancel" color="grey" v-close-popup />
+          <q-btn flat label="Delete" color="negative" @click="deleteNote" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -131,10 +158,26 @@ const draggingNote = ref<Note | null>(null);
 const draggedNotePosition = reactive({ x: 0, y: 0 });
 const offsetX = ref(0);
 const offsetY = ref(0);
+const currentUserRole = ref<'owner' | 'editor' | 'viewer'>('viewer');
+const confirmDelete = ref(false);
+
+function deleteNote() {
+  if (!editingNote.value.id) return;
+
+  socketService.emit('note:delete', {
+    noteId: editingNote.value.id,
+    boardId,
+  });
+
+  showEditNote.value = false;
+  confirmDelete.value = false;
+}
 
 async function fetchBoard() {
   const { data } = await api.get(`/api/boards/${boardId}`);
-  board.value = data;
+  console.log('board data: ', data);
+  board.value = data.board;
+  currentUserRole.value = data.role;
 }
 
 function createNote() {

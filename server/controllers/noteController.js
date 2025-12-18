@@ -101,7 +101,14 @@ export const updateNote = (noteId, boardId, userId, updates) => {
 export const deleteNote = (noteId, boardId, userId) => {
   if (!isOwnerOrEditor(boardId, userId)) throw { status: 403, message: 'Forbidden' };
 
-  db.prepare('DELETE FROM notes WHERE id = ? AND board_id = ?').run(noteId, boardId);
+  const note = db
+    .prepare('SELECT id FROM notes WHERE id = ? AND board_id = ?')
+    .get(noteId, boardId);
+
+  if (!note) throw { status: 404, message: 'Note not found' };
+
+  db.prepare('DELETE FROM notes WHERE id = ?').run(noteId);
+
   return { noteId, boardId };
 };
 

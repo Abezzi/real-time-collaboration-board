@@ -31,11 +31,29 @@ export const getBoard = (boardId, userId) => {
   }
 
   const board = db
-    .prepare('SELECT id, title AS name, description FROM boards WHERE id = ?')
+    .prepare('SELECT id, title AS name, description, owner_id FROM boards WHERE id = ?')
     .get(boardId);
+
   if (!board) throw { status: 404, message: 'Board not found' };
 
-  return board;
+  // Determine role
+  let role = 'viewer';
+  if (board.owner_id === userId) {
+    role = 'owner';
+  } else {
+    const collab = db
+      .prepare('SELECT role FROM board_users WHERE board_id = ? AND user_id = ?')
+      .get(boardId, userId);
+    if (collab) role = collab.role;
+  }
+
+  // remove owner_id from response
+  delete board.owner_id;
+
+  return {
+    board,
+    role,
+  };
 };
 
 export const createBoard = (name, description, ownerId) => {
@@ -75,7 +93,14 @@ export const getCollaborators = (boardId, userId) => {
     throw { status: 403, message: 'Forbidden' };
   }
 
-  return db
+  const board = db.prepare('SELECT owner_id FROM boards WHERE id = ?').get(boardId);
+  if (!board) throw { status: 404, message: 'Board not found' };
+
+  const owner = db
+    .prepare('SELECT id AS userId, username FROM users WHERE id = ?')
+    .get(board.owner_id);
+
+  const collaborators = db
     .prepare(
       `
     SELECT u.id AS userId, u.username, bu.role
@@ -85,6 +110,14 @@ export const getCollaborators = (boardId, userId) => {
   `,
     )
     .all(boardId);
+
+  // Prepend owner with role 'owner'
+  const allCollaborators = [
+    { userId: owner.userId, username: owner.username, role: 'owner' },
+    ...collaborators,
+  ];
+
+  return allCollaborators;
 };
 
 export const updateCollaborators = (boardId, userId, collaborators = []) => {
