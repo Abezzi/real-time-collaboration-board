@@ -1,1 +1,8 @@
 // app global css in SCSS form
+/* Disable text selection while dragging */
+.no-select {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
