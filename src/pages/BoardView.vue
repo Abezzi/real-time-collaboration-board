@@ -83,10 +83,24 @@
     <q-dialog v-model="showEditNote">
       <q-card style="width: 400px">
         <q-card-section>
-          <q-input v-model="editingNote.title" label="Title" />
-          <q-editor v-model="editingNote.content" min-height="200px" />
-          <q-color v-model="editingNote.color" label="Color" />
+          <!-- editing indicator -->
+          <div
+            class="text-caption text-grey"
+            v-if="notesStore.notesBeingEdited.has(editingNote.id)"
+          >
+            <q-icon name="edit" size="xs" class="q-mr-xs" />
+            Being edited by {{ notesStore.notesBeingEdited.get(editingNote.id) }}
+            <span v-if="isNoteLockedByOtherUser" class="text-negative"> (you cannot edit)</span>
+          </div>
+          <q-input v-model="editingNote.title" label="Title" :disable="isNoteLockedByOtherUser" />
+          <q-editor
+            v-model="editingNote.content"
+            min-height="200px"
+            :disable="isNoteLockedByOtherUser"
+          />
+          <q-color v-model="editingNote.color" label="Color" :disable="isNoteLockedByOtherUser" />
         </q-card-section>
+        <!-- actions/buttons -->
         <q-card-actions align="between">
           <q-btn
             v-if="currentUserRole === 'owner' || currentUserRole === 'editor'"
@@ -95,10 +109,16 @@
             icon="delete"
             label="Delete"
             @click="confirmDelete = true"
+            :disabled="isNoteLockedByOtherUser"
           />
           <div>
-            <q-btn flat label="Cancel" v-close-popup />
-            <q-btn color="primary" label="Save" @click="saveNoteEdit" />
+            <q-btn flat label="Cancel" v-close-popup @click="cancelEdit" />
+            <q-btn
+              color="primary"
+              label="Save"
+              @click="saveNoteEdit"
+              :disabled="isNoteLockedByOtherUser"
+            />
           </div>
         </q-card-actions>
       </q-card>
@@ -130,6 +150,7 @@ import { useNotesStore } from 'src/stores/notesStore';
 import { socketService } from 'src/services/SocketService';
 import type { Note } from 'src/types/socketEvents';
 import { api } from 'src/boot/axios';
+import { useQuasar } from 'quasar';
 
 const route = useRoute();
 const notesStore = useNotesStore();
@@ -160,6 +181,16 @@ const offsetX = ref(0);
 const offsetY = ref(0);
 const currentUserRole = ref<'owner' | 'editor' | 'viewer'>('viewer');
 const confirmDelete = ref(false);
+const currentUsername = computed(() => notesStore.currentUsername);
+const isNoteLockedByOtherUser = computed(() => {
+  if (!editingNote.value.id) return false;
+  const editor = notesStore.notesBeingEdited.get(editingNote.value.id);
+  // not being edited
+  if (!editor) return false;
+  // locked by someone else
+  return editor !== currentUsername.value;
+});
+const $q = useQuasar();
 
 function deleteNote() {
   if (!editingNote.value.id) return;
@@ -256,8 +287,26 @@ function onMouseUp() {
 }
 
 function editNote(note: Note) {
+  const currentlyEditedBy = notesStore.notesBeingEdited.get(note.id);
+
+  // someone else is editing, show warning and open read-only
+  if (currentlyEditedBy && currentlyEditedBy !== notesStore.currentUsername) {
+    $q.notify({
+      type: 'warning',
+      message: `This note is currently being edited by ${currentlyEditedBy}`,
+      timeout: 4000,
+    });
+
+    editingNote.value = { ...note, comments: [...note.comments] };
+    showEditNote.value = true;
+    return;
+  }
+
+  // no one is editing
   editingNote.value = { ...note, comments: [...note.comments] };
   showEditNote.value = true;
+
+  socketService.emit('note:edit:start', { noteId: note.id, boardId });
 }
 
 function saveNoteEdit() {
@@ -270,6 +319,11 @@ function saveNoteEdit() {
   };
 
   socketService.emit('note:update', payload);
+
+  if (isCurrentUserEditing(editingNote.value.id)) {
+    socketService.emit('note:edit:end', { noteId: editingNote.value.id, boardId });
+  }
+
   showEditNote.value = false;
 }
 
@@ -292,6 +346,20 @@ onMounted(async () => {
   });
   await fetchBoard();
 });
+
+function isCurrentUserEditing(noteId: number): boolean {
+  const editor = notesStore.notesBeingEdited.get(noteId);
+  return editor === notesStore.currentUsername;
+}
+
+function cancelEdit() {
+  // release note lock on cancel if the user is the one editing it
+  if (isCurrentUserEditing(editingNote.value.id)) {
+    socketService.emit('note:edit:end', { noteId: editingNote.value.id, boardId });
+  }
+
+  showEditNote.value = false;
+}
 
 onBeforeUnmount(() => {
   console.log('🔴 onBeforeUnmount - cleaning up');

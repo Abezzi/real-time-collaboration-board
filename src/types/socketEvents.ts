@@ -28,6 +28,9 @@ export interface ServerToClientEvents {
   'note:commented': (data: { noteId: number; newComment: NoteComment }) => void;
   'presence:users': (users: string[]) => void;
   'server:error': (error: { message: string }) => void;
+  'note:edit:started': (data: { noteId: number; editedBy: string }) => void;
+  'note:edit:ended': (data: { noteId: number }) => void;
+  'note:edit:locked': (data: { noteId: number; editedBy: string }) => void;
 }
 
 // Client - Server events
@@ -38,4 +41,6 @@ export interface ClientToServerEvents {
   'note:update': (note: Partial<Note> & { id: number; boardId: number }) => void;
   'note:delete': (data: { noteId: number; boardId: number }) => void;
   'note:comment': (data: { noteId: number; boardId: number; text: string }) => void;
+  'note:edit:start': (data: { noteId: number; boardId: number }) => void;
+  'note:edit:end': (data: { noteId: number; boardId: number }) => void;
 }

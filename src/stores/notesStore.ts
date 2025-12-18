@@ -1,13 +1,16 @@
 import { defineStore } from 'pinia';
 import { socketService } from 'src/services/SocketService';
 import type { Note, NoteComment } from 'src/types/socketEvents';
-import { ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
+import { useAuthStore } from './auth';
 
 export const useNotesStore = defineStore('notes', () => {
   const notes = ref<Note[]>([]);
   const onlineUsers = ref<string[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const notesBeingEdited = reactive<Map<number, string>>(new Map());
+  const authStore = useAuthStore();
 
   function setNotes(newNotes: Note[]) {
     notes.value = newNotes;
@@ -54,6 +57,7 @@ export const useNotesStore = defineStore('notes', () => {
       console.log('✅ Received note:deleted', noteId);
       removeNote(noteId);
     });
+
     socketService.on(
       'note:commented',
       ({ noteId, newComment }: { noteId: number; newComment: NoteComment }) => {
@@ -61,6 +65,7 @@ export const useNotesStore = defineStore('notes', () => {
         addComment(noteId, newComment);
       },
     );
+
     socketService.on('presence:users', (users: string[]) => {
       console.log('✅ Received presence:users', users);
       onlineUsers.value = users;
@@ -70,6 +75,26 @@ export const useNotesStore = defineStore('notes', () => {
       console.error('❌ Server error:', err);
       error.value = err.message;
     });
+
+    socketService.on(
+      'note:edit:started',
+      ({ noteId, editedBy }: { noteId: number; editedBy: string }) => {
+        console.log('✏️Received note:edit:start');
+        notesBeingEdited.set(noteId, editedBy);
+      },
+    );
+
+    socketService.on('note:edit:ended', ({ noteId }: { noteId: number }) => {
+      console.log('✏️Received note:edit:ended');
+      notesBeingEdited.delete(noteId);
+    });
+
+    socketService.on(
+      'note:edit:locked',
+      ({ noteId, editedBy }: { noteId: number; editedBy: string }) => {
+        console.log(`🔒 LOCKED, Note ${noteId} is being edited by ${editedBy}`);
+      },
+    );
   }
 
   // Cleanup when leaving board
@@ -94,5 +119,7 @@ export const useNotesStore = defineStore('notes', () => {
     addComment,
     initSocketListeners,
     cleanupSocketListeners,
+    currentUsername: computed(() => authStore.user?.username),
+    notesBeingEdited,
   };
 });
