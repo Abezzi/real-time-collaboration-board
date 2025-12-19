@@ -12,7 +12,7 @@ Real-time Collaboration Board with Vue3 + Socket.io
 
 ## Usage
 
-[Sample Video](https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&start_radio=1)
+[Demostration Video](https://youtu.be/G9pMARgXZo0) <- Redirects you to youtube
 
 ## Setup
 
