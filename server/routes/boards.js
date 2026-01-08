@@ -6,11 +6,13 @@ import {
   createBoard,
   updateBoard,
   deleteBoard,
-  getCollaborators,
-  updateCollaborators,
   getNotes,
 } from '../controllers/boardController.js';
 import notesRoutes from './notes.js';
+import {
+  getBoardCollaborators,
+  updateBoardCollaborators,
+} from '../controllers/collaboratorController.js';
 
 const router = express.Router();
 
@@ -60,7 +62,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
 // GET Collaborators
 router.get('/:id/collaborators', authenticateToken, (req, res) => {
   try {
-    const collabs = getCollaborators(Number(req.params.id), req.user.id);
+    const collabs = getBoardCollaborators(Number(req.params.id), req.user.id);
     res.json(collabs);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
@@ -70,7 +72,11 @@ router.get('/:id/collaborators', authenticateToken, (req, res) => {
 // PUT Collaborators
 router.put('/:id/collaborators', authenticateToken, (req, res) => {
   try {
-    const result = updateCollaborators(Number(req.params.id), req.user.id, req.body.collaborators);
+    const result = updateBoardCollaborators(
+      Number(req.params.id),
+      req.user.id,
+      req.body.collaborators,
+    );
     res.json(result);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });

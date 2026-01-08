@@ -7,7 +7,10 @@ import {
   updatePage,
   deletePage,
 } from '../controllers/pageController.js';
-import { getCollaborators, updateCollaborators } from '../controllers/collaboratorController.js';
+import {
+  getPageCollaborators,
+  updatePageCollaborators,
+} from '../controllers/collaboratorController.js';
 
 const router = express.Router();
 
@@ -57,7 +60,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
 // GET Collaborators
 router.get('/:id/collaborators', authenticateToken, (req, res) => {
   try {
-    const collabs = getCollaborators(Number(req.params.id), req.user.id);
+    const collabs = getPageCollaborators(Number(req.params.id), req.user.id);
     res.json(collabs);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
@@ -67,7 +70,11 @@ router.get('/:id/collaborators', authenticateToken, (req, res) => {
 // PUT Collaborators
 router.put('/:id/collaborators', authenticateToken, (req, res) => {
   try {
-    const result = updateCollaborators(Number(req.params.id), req.user.id, req.body.collaborators);
+    const result = updatePageCollaborators(
+      Number(req.params.id),
+      req.user.id,
+      req.body.collaborators,
+    );
     res.json(result);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
