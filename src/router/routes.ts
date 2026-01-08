@@ -26,6 +26,21 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/BoardView.vue'),
         meta: { requiresAuth: true },
       },
+      {
+        path: 'note',
+        component: () => import('pages/NoteView.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'page',
+        component: () => import('pages/PagePage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'page/:id(\\d+)',
+        component: () => import('pages/PageView.vue'),
+        meta: { requiresAuth: true },
+      },
       // add other protected children here (note, chat, team, etc.)
     ],
   },

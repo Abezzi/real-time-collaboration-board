@@ -21,3 +21,11 @@ export function hasBoardAccess(boardId, userId) {
       .get(boardId, userId) !== undefined
   );
 }
+
+export function hasPageAccess(pageId, userId) {
+  return (
+    isOwner(pageId, userId) ||
+    db.prepare('SELECT 1 FROM page_users WHERE page_id = ? AND user_id = ?').get(pageId, userId) !==
+    undefined
+  );
+}

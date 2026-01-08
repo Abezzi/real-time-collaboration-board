@@ -37,6 +37,23 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS pages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    owner_id INTEGER NOT NULL,
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS page_users (
+    page_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('editor', 'viewer')),
+    PRIMARY KEY (page_id, user_id),
+    FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     board_id INTEGER NOT NULL,
@@ -55,6 +72,9 @@ db.exec(`
 // migrate existing boards table if needed
 addColumnIfNotExists('boards', 'description', 'TEXT');
 addColumnIfNotExists('boards', 'owner_id', 'INTEGER NOT NULL DEFAULT 1');
+// migrate existing pages table if needed
+addColumnIfNotExists('pages', 'description', 'TEXT');
+addColumnIfNotExists('pages', 'owner_id', 'INTEGER NOT NULL DEFAULT 1');
 // migrate notes
 addColumnIfNotExists('notes', 'color', 'TEXT DEFAULT "#fff59d"');
 addColumnIfNotExists('notes', 'updated_by', 'INTEGER DEFAULT NULL');
@@ -68,6 +88,17 @@ if (boardsWithoutOwner.length > 0) {
   const updateStmt = db.prepare('UPDATE boards SET owner_id = 1 WHERE id = ?');
   for (const board of boardsWithoutOwner) {
     updateStmt.run(board.id);
+  }
+}
+
+const pagesWithoutOwner = db
+  .prepare('SELECT id FROM pages WHERE owner_id IS NULL OR owner_id = 0')
+  .all();
+if (pagesWithoutOwner.length > 0) {
+  console.log(`Migrating ${pagesWithoutOwner.length} existing pages to set owner_id`);
+  const updateStmt = db.prepare('UPDATE pages SET owner_id = 1 WHERE id = ?');
+  for (const page of pagesWithoutOwner) {
+    updateStmt.run(page.id);
   }
 }
 

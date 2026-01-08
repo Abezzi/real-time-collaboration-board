@@ -182,6 +182,8 @@ const offsetY = ref(0);
 const currentUserRole = ref<'owner' | 'editor' | 'viewer'>('viewer');
 const confirmDelete = ref(false);
 const currentUsername = computed(() => notesStore.currentUsername);
+
+// disables input fields in the edit dialog
 const isNoteLockedByOtherUser = computed(() => {
   if (!editingNote.value.id) return false;
   const editor = notesStore.notesBeingEdited.get(editingNote.value.id);
@@ -190,8 +192,10 @@ const isNoteLockedByOtherUser = computed(() => {
   // locked by someone else
   return editor !== currentUsername.value;
 });
+
 const $q = useQuasar();
 
+// deletes note after confirmation
 function deleteNote() {
   if (!editingNote.value.id) return;
 
@@ -204,6 +208,7 @@ function deleteNote() {
   confirmDelete.value = false;
 }
 
+// loads board data
 async function fetchBoard() {
   const { data } = await api.get(`/api/boards/${boardId}`);
   console.log('board data: ', data);
@@ -211,6 +216,7 @@ async function fetchBoard() {
   currentUserRole.value = data.role;
 }
 
+// creates a note at (100, 100)
 function createNote() {
   const note = {
     boardId,
@@ -224,6 +230,7 @@ function createNote() {
   socketService.emit('note:create', note);
 }
 
+// starting drag
 function startDrag(event: MouseEvent, note: Note) {
   // prevent drag if note has no real server id yet (avoids "Note not found")
   if (!note.id || note.id <= 0) return;
@@ -241,36 +248,42 @@ function startDrag(event: MouseEvent, note: Note) {
   note.zIndex = maxZ + 1;
   socketService.emit('note:update', { id: note.id, boardId, zIndex: note.zIndex });
 
+  // initialize live position
   draggedNotePosition.x = note.x;
   draggedNotePosition.y = note.y;
 
-  // avoid selection while dragging
+  // avoid text selection while dragging
   canvasEl.value?.classList.add('no-select');
 
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
 }
 
+// during drag-up
 function onMouseMove(event: MouseEvent) {
   if (!draggingNote.value || !canvasEl.value) return;
 
   const canvasRect = canvasEl.value.getBoundingClientRect();
 
+  // calculates the position relative to the canvas container (not window)
   draggedNotePosition.x = Math.max(0, Math.round(event.clientX - canvasRect.left - offsetX.value));
   draggedNotePosition.y = Math.max(0, Math.round(event.clientY - canvasRect.top - offsetY.value));
 }
 
+// ending drag
 function onMouseUp() {
   if (!draggingNote.value) return;
 
   const noteId = draggingNote.value.id;
 
+  // updates local store (optimistic)
   notesStore.updateNote({
     ...draggingNote.value,
     x: draggedNotePosition.x,
     y: draggedNotePosition.y,
   });
 
+  // sends final position to server
   socketService.emit('note:update', {
     id: noteId,
     boardId,
@@ -281,11 +294,13 @@ function onMouseUp() {
   // re-enabling text selection
   canvasEl.value?.classList.remove('no-select');
 
+  // cleanup
   document.removeEventListener('mousemove', onMouseMove);
   document.removeEventListener('mouseup', onMouseUp);
   draggingNote.value = null;
 }
 
+// open the edit dialog
 function editNote(note: Note) {
   const currentlyEditedBy = notesStore.notesBeingEdited.get(note.id);
 
@@ -309,6 +324,7 @@ function editNote(note: Note) {
   socketService.emit('note:edit:start', { noteId: note.id, boardId });
 }
 
+// save changes from the edit dialog
 function saveNoteEdit() {
   const payload = {
     id: editingNote.value.id,
@@ -320,6 +336,7 @@ function saveNoteEdit() {
 
   socketService.emit('note:update', payload);
 
+  // release the lock
   if (isCurrentUserEditing(editingNote.value.id)) {
     socketService.emit('note:edit:end', { noteId: editingNote.value.id, boardId });
   }
@@ -327,6 +344,7 @@ function saveNoteEdit() {
   showEditNote.value = false;
 }
 
+// sends the comment when the user presses enter
 function addCommentToNote(noteId: number, text: string) {
   if (!text.trim()) return;
   socketService.emit('note:comment', { noteId, boardId, text });
@@ -347,11 +365,13 @@ onMounted(async () => {
   await fetchBoard();
 });
 
+// helper to check if someone is editing
 function isCurrentUserEditing(noteId: number): boolean {
   const editor = notesStore.notesBeingEdited.get(noteId);
   return editor === notesStore.currentUsername;
 }
 
+// close dialog without editing
 function cancelEdit() {
   // release note lock on cancel if the user is the one editing it
   if (isCurrentUserEditing(editingNote.value.id)) {

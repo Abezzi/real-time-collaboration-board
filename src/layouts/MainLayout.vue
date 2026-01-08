@@ -148,6 +148,12 @@ const linksList: EssentialLinkProps[] = [
     link: '/note',
   },
   {
+    title: 'Pages',
+    caption: 'Pages',
+    icon: 'menu_book',
+    link: '/page',
+  },
+  {
     title: 'Chat Channel',
     caption: 'Team Conversations',
     icon: 'chat',
