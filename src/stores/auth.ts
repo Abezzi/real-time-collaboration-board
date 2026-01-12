@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { api } from 'boot/axios';
+import { api } from '../../src/boot/axios';
 
 export interface User {
   id: number;

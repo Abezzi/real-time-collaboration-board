@@ -1,7 +1,7 @@
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
 import type { ServerToClientEvents, ClientToServerEvents, Note } from 'src/types/socketEvents';
-import { useAuthStore } from 'src/stores/auth';
+import { useAuthStore } from '../../src/stores/auth';
 
 class SocketService {
   // Properly typed socket with our custom events

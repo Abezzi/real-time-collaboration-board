@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { socketService } from 'src/services/SocketService';
+import { socketService } from '../../src/services/SocketService';
 import type { Note, NoteComment } from 'src/types/socketEvents';
 import { computed, reactive, ref } from 'vue';
 import { useAuthStore } from './auth';
