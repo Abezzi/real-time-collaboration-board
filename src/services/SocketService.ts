@@ -1,10 +1,14 @@
 import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client';
-import type { ServerToClientEvents, ClientToServerEvents, Note } from 'src/types/socketEvents';
+import type {
+  ServerToClientEvents,
+  ClientToServerEvents,
+  Note,
+} from '../../src/types/socketEvents';
 import { useAuthStore } from '../../src/stores/auth';
 
 class SocketService {
-  // Properly typed socket with our custom events
+  // Properly typed socket with custom events
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null;
 
   connect() {
@@ -39,7 +43,7 @@ class SocketService {
     this.socket?.emit('leaveBoard', boardId);
   }
 
-  // Generic emit — now correctly typed
+  // Generic emit
   emit<K extends keyof ClientToServerEvents>(
     event: K,
     ...args: Parameters<ClientToServerEvents[K]>
@@ -49,8 +53,6 @@ class SocketService {
 
   // Generic listener
   on<K extends keyof ServerToClientEvents>(event: K, listener: ServerToClientEvents[K]) {
-    // this line is safe because we already constrain K to valid events, and always pass the correct listener type
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.socket?.on(event, listener as any);
   }
@@ -78,3 +80,4 @@ class SocketService {
 }
 
 export const socketService = new SocketService();
+export default SocketService;
