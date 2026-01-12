@@ -1,6 +1,8 @@
 {
   "extends": "./.quasar/tsconfig.json",
   "compilerOptions": {
-    "exactOptionalPropertyTypes": false
+    "exactOptionalPropertyTypes": false,
+    "types": ["vitest/globals"]
   }
+  // "include": ["src/**/*.ts", "src/**/*.tsx", "**/*.test.ts", "**/*.spec.ts"]
 }
